@@ -1,46 +1,16 @@
 name: Bootstrap a new account in access-control repo
 description: "Sets up a new AWS account and basic roles inside the access control repo"
 inputs:
-  token:
-    description: "The GitHub token to use for checking out the infrastructure-live repo"
-    required: true
-  deploy_branch_name:
+  terragrunt_command:
     description: "The name of the configured deploy branch"
     required: false
     default: main
-  change_type:
+  new_account_name:
     description: ""
     required: true
   branch:
     description: ""
     required: true
-  working_directory:
-    description: ""
-    required: true
-  account_id:
-    description: ""
-    required: true
-  terragrunt_command:
-    description: ""
-    required: true
-  additional_data:
-    description: ""
-    required: true
-  child_account_id:
-    description: ""
-    required: true
-  new_account_name:
-    description: ""
-    required: true
-  team_account_names:
-    description: ""
-    required: true
-
-outputs:
-  gruntwork_config:
-    description: "YAML string contents of .gruntwork/config.yml in infrastructure-pipelines repo"
-    value: ${{ steps.read_gruntwork_config.outputs.config }}
-
 
 runs:
   using: composite
@@ -49,14 +19,14 @@ runs:
       id: provision_access_control
       uses: gruntwork-io-team/pipelines-setup-access-control@main
       with:
-        new_account_name: ${{ steps.bootstrap.outputs.new_account_name }}
+        new_account_name: ${{ inputs.new_account_name }}
 
     - name: "[ProvisionAccount]: Read account request"
       id: account_request
       shell: bash
       # Only try this if we've actually created the account
       env:
-        NEW_ACCOUNT_NAME: ${{ steps.bootstrap.outputs.new_account_name }}
+        NEW_ACCOUNT_NAME: ${{ inputs.new_account_name }}
       run: |
         request_file_path="./_new-account-requests/account-$NEW_ACCOUNT_NAME.yml"
 
@@ -80,13 +50,15 @@ runs:
         echo "account_baseline_modules_version=$account_baseline_modules_version" >> "$GITHUB_OUTPUT"
         echo "account_baseline_cis_service_catalog_version=$account_baseline_cis_service_catalog_version" >> "$GITHUB_OUTPUT"
         echo "create_vpc=$create_vpc" >> "$GITHUB_OUTPUT"
+        tags="$(yq -o=json -I=0 '.tags' "$request_file_path")"
+        echo "default_tags=$tags" >> "$GITHUB_OUTPUT"
 
     - name: "[ProvisionAccount]: Get requesting PR number"
       id: get_pr_number
       shell: bash
-      if:  ${{ steps.bootstrap.outputs.terragrunt_command == 'apply' }}
+      if:  ${{ inputs.terragrunt_command == 'apply' }}
       env:
-        COMMIT_SHA: ${{ steps.bootstrap.outputs.branch }}
+        COMMIT_SHA: ${{ inputs.branch }}
         GH_TOKEN: ${{ secrets.GRUNTWORK_CODE_ACCESS_TOKEN }}
         REPO: ${{ github.repository }}
       run: |
@@ -95,7 +67,7 @@ runs:
         echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
 
     - name: "[ProvisionAccount]: Check out terraform-aws-control-tower repo"
-      if: ${{ steps.bootstrap.outputs.terragrunt_command == 'apply' }}
+      if: ${{ inputs.terragrunt_command == 'apply' }}
       uses: actions/checkout@v4
       with:
         repository: gruntwork-io/terraform-aws-control-tower
@@ -104,7 +76,7 @@ runs:
         ref: ${{ env.CONTROL_TOWER_MODULES_VERSION }}
 
     - name: "[ProvisionAccount]: Install boilerplate"
-      if:  ${{ steps.bootstrap.outputs.terragrunt_command == 'apply' }}
+      if:  ${{ inputs.terragrunt_command == 'apply' }}
       shell: bash
       env:
         GITHUB_OAUTH_TOKEN: ${{ secrets.GRUNTWORK_CODE_ACCESS_TOKEN }}
@@ -113,16 +85,16 @@ runs:
         gruntwork-install --binary-name boilerplate --repo https://github.com/gruntwork-io/boilerplate --tag "$BOILERPLATE_VERSION"
 
     - name: "[ProvisionAccount]: Run boilerplate to generate code"
-      if:  ${{ steps.bootstrap.outputs.terragrunt_command == 'apply' }}
+      if:  ${{ inputs.terragrunt_command == 'apply' }}
       shell: bash
       env:
-        ACCOUNT_NAME: ${{ steps.bootstrap.outputs.new_account_name }}
+        ACCOUNT_NAME: ${{ inputs.new_account_name }}
         AWS_REGION: ${{ steps.account_request.outputs.aws_region }}
         ORG_NAME_PREFIX: ${{ steps.account_request.outputs.org_name_prefix }}
         ACCOUNT_BASELINE_MODULES_VERSION: ${{ steps.account_request.outputs.account_baseline_modules_version }}
         ACCOUNT_BASELINE_CIS_SERVICE_CATALOG_VERSION: ${{ steps.account_request.outputs.account_baseline_cis_service_catalog_version }}
         REQUESTING_TEAM_NAME: ${{ steps.account_request.outputs.requesting_team_name }}
-        DEFAULT_TAGS: ${{ steps.bootstrap.outputs.default_tags }}
+        DEFAULT_TAGS: ${{ steps.account_request.outputs.default_tags }}
         CREATE_VPC: ${{ steps.account_request.outputs.create_vpc  }}
       run: |
         boilerplate \
@@ -141,21 +113,21 @@ runs:
 
     - name: "[ProvisionAccount]: Remove Control Tower Repo"
       shell: bash
-      if:  ${{ steps.bootstrap.outputs.terragrunt_command == 'apply' }}
+      if:  ${{ inputs.terragrunt_command == 'apply' }}
       run: rm -rf terraform-aws-control-tower
 
     - name: "[ProvisionAccount]: Create Pull Request"
-      if:  ${{ steps.bootstrap.outputs.terragrunt_command == 'apply' }}
+      if:  ${{ inputs.terragrunt_command == 'apply' }}
       id: create_pr
       uses: peter-evans/create-pull-request@v6
       with:
         base: main
         token: ${{ secrets.GRUNTWORK_CODE_ACCESS_TOKEN }}
-        branch: "enhancement/baseline-account-${{ steps.bootstrap.outputs.new_account_name }}"
-        commit-message: "Generate account baseline for: ${{ steps.bootstrap.outputs.new_account_name }}"
-        title: "Generate account baseline for: ${{ steps.bootstrap.outputs.new_account_name }}"
+        branch: "enhancement/baseline-account-${{ inputs.new_account_name }}"
+        commit-message: "Generate account baseline for: ${{ inputs.new_account_name }}"
+        title: "Generate account baseline for: ${{ inputs.new_account_name }}"
         body: |
-          This pull request applies an account baseline to the **${{ steps.bootstrap.outputs.new_account_name }}** AWS account, which was created in https://github.com/${{ github.repository }}/pull/${{ steps.get_pr_number.outputs.pr_number }} using Gruntwork Landing Zone. To **apply** this baseline, do the following:
+          This pull request applies an account baseline to the **${{ inputs.new_account_name }}** AWS account, which was created in https://github.com/${{ github.repository }}/pull/${{ steps.get_pr_number.outputs.pr_number }} using Gruntwork Landing Zone. To **apply** this baseline, do the following:
 
             1. Inspect the details in this pull request and confirm correctness.
             2. Merge this pull request.
