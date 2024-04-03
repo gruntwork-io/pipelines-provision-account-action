@@ -14,8 +14,8 @@ inputs:
   gruntwork_code_access_token:
     description: ""
     required: true
-  bootstrap:
-    description: "JSON Object output from the bootstrap step"
+  gruntwork_context:
+    description: "Gruntwork Context From the Gruntwork Bootstrap step"
     required: true
 
 runs:
@@ -27,20 +27,28 @@ runs:
     #   with:
     #     new_account_name: ${{ inputs.new_account_name }}
 
+    - name: "[ProvisionAccount]: Load Gruntwork Context"
+      id: gruntwork_context
+      uses: gruntwork-io-team/pipelines-bootstrap@main
+      # Only try this if we've actually created the account
+      with:
+        cache: ${{ inputs.gruntwork_context }}
+        token: ${{ inputs.gruntwork_code_access_token }}
+
     - name: "[ProvisionAccount]: Run Terragrunt to Create the account in AWS"
       id: terragrunt
       uses: gruntwork-io-team/pipelines-aws-execute@main
       with:
         gruntwork_code_access_token: ${{ inputs.gruntwork_code_access_token }}
-        terragrunt_command: ${{ inputs.bootstrap.terragrunt_command }}
-        account_id: ${{ inputs.bootstrap.account_id }}
-        aws_region: ${{ inputs.bootstrap.aws_region }}
-        branch: ${{ inputs.bootstrap.branch }}
-        working_directory: ${{ inputs.bootstrap.working_directory }}
-        account_role_name: ${{ inputs.bootstrap.role_name }}
-        role_session_name: ${{ inputs.bootstrap.role_session_name }}
-        chain_account_id: ${{ inputs.bootstrap.child_account_id }}
-        chain_account_role_name: ${{ inputs.bootstrap.child_acct_role_name }}
+        terragrunt_command: ${{ steps.gruntwork_context.outputs.terragrunt_command }}
+        account_id: ${{ steps.gruntwork_context.outputs.account_id }}
+        aws_region: ${{ steps.gruntwork_context.outputs.aws_region }}
+        branch: ${{ steps.gruntwork_context.outputs.branch }}
+        working_directory: ${{ steps.gruntwork_context.outputs.working_directory }}
+        account_role_name: ${{ steps.gruntwork_context.outputs.role_name }}
+        role_session_name: ${{ steps.gruntwork_context.outputs.role_session_name }}
+        chain_account_id: ${{ steps.gruntwork_context.outputs.child_account_id }}
+        chain_account_role_name: ${{ steps.gruntwork_context.outputs.child_acct_role_name }}
 
     - name: "[ProvisionAccount]: Get requesting PR number"
       id: get_pr_number
@@ -78,13 +86,13 @@ runs:
       shell: bash
       env:
         ACCOUNT_NAME: ${{ inputs.new_account_name }}
-        AWS_REGION: ${{ inputs.bootstrap.aws_region }}
-        ORG_NAME_PREFIX: ${{ inputs.bootstrap.org_name_prefix }}
-        ACCOUNT_BASELINE_MODULES_VERSION: ${{ inputs.bootstrap.account_baseline_modules_version }}
-        ACCOUNT_BASELINE_CIS_SERVICE_CATALOG_VERSION: ${{ inputs.bootstrap.account_baseline_cis_service_catalog_version }}
-        REQUESTING_TEAM_NAME: ${{ inputs.bootstrap.requesting_team_name }}
-        DEFAULT_TAGS: ${{ inputs.bootstrap.default_tags }}
-        CREATE_VPC: ${{ inputs.bootstrap.create_vpc  }}
+        AWS_REGION: ${{ steps.gruntwork_context.outputs.aws_region }}
+        ORG_NAME_PREFIX: ${{ steps.gruntwork_context.outputs.org_name_prefix }}
+        ACCOUNT_BASELINE_MODULES_VERSION: ${{ steps.gruntwork_context.outputs.account_baseline_modules_version }}
+        ACCOUNT_BASELINE_CIS_SERVICE_CATALOG_VERSION: ${{ steps.gruntwork_context.outputs.account_baseline_cis_service_catalog_version }}
+        REQUESTING_TEAM_NAME: ${{ steps.gruntwork_context.outputs.requesting_team_name }}
+        DEFAULT_TAGS: ${{ steps.gruntwork_context.outputs.default_tags }}
+        CREATE_VPC: ${{ steps.gruntwork_context.outputs.create_vpc  }}
       run: |
         boilerplate \
           --template-url "./terraform-aws-control-tower//templates/landingzone/boilerplate-single-account-baseline" \
