@@ -18,11 +18,11 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: "[ProvisionAccount]: Setup access-control PR"
-      id: provision_access_control
-      uses: gruntwork-io-team/pipelines-setup-access-control@main
-      with:
-        new_account_name: ${{ inputs.new_account_name }}
+    # - name: "[ProvisionAccount]: Setup access-control PR"
+    #   id: provision_access_control
+    #   uses: gruntwork-io-team/pipelines-setup-access-control@main
+    #   with:
+    #     new_account_name: ${{ inputs.new_account_name }}
 
     - name: "[ProvisionAccount]: Read account request"
       id: account_request
