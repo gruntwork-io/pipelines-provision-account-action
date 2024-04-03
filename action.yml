@@ -49,11 +49,12 @@ runs:
         role_session_name: ${{ steps.gruntwork_context.outputs.role_session_name }}
         chain_account_id: ${{ steps.gruntwork_context.outputs.child_account_id }}
         chain_account_role_name: ${{ steps.gruntwork_context.outputs.child_acct_role_name }}
+        gruntwork_context: ${{ inputs.gruntwork_context }}
 
     - name: "[ProvisionAccount]: Get requesting PR number"
       id: get_pr_number
       shell: bash
-      if:  ${{ inputs.terragrunt_command == 'apply' }}
+      if: ${{ inputs.terragrunt_command == 'apply' }}
       env:
         COMMIT_SHA: ${{ inputs.branch }}
         GH_TOKEN: ${{ inputs.gruntwork_code_access_token }}
@@ -73,7 +74,7 @@ runs:
         ref: ${{ env.CONTROL_TOWER_MODULES_VERSION }}
 
     - name: "[ProvisionAccount]: Install boilerplate"
-      if:  ${{ inputs.terragrunt_command == 'apply' }}
+      if: ${{ inputs.terragrunt_command == 'apply' }}
       shell: bash
       env:
         GITHUB_OAUTH_TOKEN: ${{ inputs.gruntwork_code_access_token }}
@@ -82,7 +83,7 @@ runs:
         gruntwork-install --binary-name boilerplate --repo https://github.com/gruntwork-io/boilerplate --tag "$BOILERPLATE_VERSION"
 
     - name: "[ProvisionAccount]: Run boilerplate to generate code"
-      if:  ${{ inputs.terragrunt_command == 'apply' }}
+      if: ${{ inputs.terragrunt_command == 'apply' }}
       shell: bash
       env:
         ACCOUNT_NAME: ${{ inputs.new_account_name }}
@@ -110,11 +111,11 @@ runs:
 
     - name: "[ProvisionAccount]: Remove Control Tower Repo"
       shell: bash
-      if:  ${{ inputs.terragrunt_command == 'apply' }}
+      if: ${{ inputs.terragrunt_command == 'apply' }}
       run: rm -rf terraform-aws-control-tower
 
     - name: "[ProvisionAccount]: Create Pull Request"
-      if:  ${{ inputs.terragrunt_command == 'apply' }}
+      if: ${{ inputs.terragrunt_command == 'apply' }}
       id: create_pr
       uses: peter-evans/create-pull-request@v6
       with:
