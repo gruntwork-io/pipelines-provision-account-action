@@ -31,6 +31,7 @@ runs:
       with:
         new_account_name: ${{ inputs.new_account_name }}
         terragrunt_command: ${{ inputs.terragrunt_command }}
+        branch: ${{ inputs.branch }}
 
     - name: "[ProvisionAccount]: Get requesting PR number"
       id: get_pr_number
