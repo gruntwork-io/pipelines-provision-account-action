@@ -11,6 +11,9 @@ inputs:
   branch:
     description: ""
     required: true
+  gruntwork_code_access_token:
+    description: ""
+    required: true
 
 runs:
   using: composite
@@ -26,7 +29,8 @@ runs:
       uses: gruntwork-io-team/pipelines-bootstrap@main
       # Only try this if we've actually created the account
       with:
-        NEW_ACCOUNT_NAME: ${{ inputs.new_account_name }}
+        new_account_name: ${{ inputs.new_account_name }}
+        terragrunt_command: ${{ inputs.terragrunt_command }}
 
     - name: "[ProvisionAccount]: Get requesting PR number"
       id: get_pr_number
@@ -34,7 +38,7 @@ runs:
       if:  ${{ inputs.terragrunt_command == 'apply' }}
       env:
         COMMIT_SHA: ${{ inputs.branch }}
-        GH_TOKEN: ${{ secrets.GRUNTWORK_CODE_ACCESS_TOKEN }}
+        GH_TOKEN: ${{ inputs.gruntwork_code_access_token }}
         REPO: ${{ github.repository }}
       run: |
         PR_NUMBER=$(gh -R "$REPO" pr list --search "$COMMIT_SHA" --state merged --json number -q '.[0].number')
@@ -46,7 +50,7 @@ runs:
       uses: actions/checkout@v4
       with:
         repository: gruntwork-io/terraform-aws-control-tower
-        token: ${{ secrets.GRUNTWORK_CODE_ACCESS_TOKEN }}
+        token: ${{ inputs.gruntwork_code_access_token }}
         path: terraform-aws-control-tower
         ref: ${{ env.CONTROL_TOWER_MODULES_VERSION }}
 
@@ -54,7 +58,7 @@ runs:
       if:  ${{ inputs.terragrunt_command == 'apply' }}
       shell: bash
       env:
-        GITHUB_OAUTH_TOKEN: ${{ secrets.GRUNTWORK_CODE_ACCESS_TOKEN }}
+        GITHUB_OAUTH_TOKEN: ${{ inputs.gruntwork_code_access_token }}
       run: |
         curl -Ls https://raw.githubusercontent.com/gruntwork-io/gruntwork-installer/main/bootstrap-gruntwork-installer.sh | bash /dev/stdin --version "$GRUNTWORK_INSTALLER_VERSION"
         gruntwork-install --binary-name boilerplate --repo https://github.com/gruntwork-io/boilerplate --tag "$BOILERPLATE_VERSION"
@@ -97,7 +101,7 @@ runs:
       uses: peter-evans/create-pull-request@v6
       with:
         base: main
-        token: ${{ secrets.GRUNTWORK_CODE_ACCESS_TOKEN }}
+        token: ${{ inputs.gruntwork_code_access_token }}
         branch: "enhancement/baseline-account-${{ inputs.new_account_name }}"
         commit-message: "Generate account baseline for: ${{ inputs.new_account_name }}"
         title: "Generate account baseline for: ${{ inputs.new_account_name }}"
