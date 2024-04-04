@@ -39,7 +39,11 @@ runs:
         role_session_name: ${{ steps.gruntwork_context.outputs.role_session_name }}
         chain_account_id: ${{ steps.gruntwork_context.outputs.child_account_id }}
         chain_account_role_name: ${{ steps.gruntwork_context.outputs.child_acct_role_name }}
-        gruntwork_context: ${{ inputs.gruntwork_context }}
+        terraform_version: ${{ steps.gruntwork_context.outputs.terraform_version }}
+        terragrunt_version: ${{ steps.gruntwork_context.outputs.terragrunt_version }}
+        gruntwork_config_file: ${{ steps.gruntwork_context.outputs.gruntwork_config_file }}
+        pipelines_cli_version: ${{ steps.gruntwork_context.outputs.pipelines_cli_version }}
+
 
     - name: "[ProvisionAccount]: Get requesting PR number"
       id: get_pr_number
