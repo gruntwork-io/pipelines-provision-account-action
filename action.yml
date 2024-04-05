@@ -11,44 +11,39 @@ inputs:
 runs:
   using: composite
   steps:
-    # - name: "[ProvisionAccount]: Setup access-control PR"
-    #   id: provision_access_control
-    #   uses: gruntwork-io-team/pipelines-setup-access-control@main
-    #   with:
-    #     new_account_name: ${{ inputs.new_account_name }}
-
     - name: "[ProvisionAccount]: Load Gruntwork Context"
       id: gruntwork_context
       uses: gruntwork-io-team/pipelines-bootstrap@main
-      # Only try this if we've actually created the account
       with:
         cache: ${{ inputs.gruntwork_context }}
         token: ${{ inputs.gruntwork_code_access_token }}
 
-    - name: "[ProvisionAccount]: Run Terragrunt to Create the account in AWS"
-      id: terragrunt
-      uses: gruntwork-io-team/pipelines-aws-execute@main
-      with:
-        gruntwork_code_access_token: ${{ inputs.gruntwork_code_access_token }}
-        terragrunt_command: ${{ steps.gruntwork_context.outputs.terragrunt_command }}
-        account_id: ${{ steps.gruntwork_context.outputs.account_id }}
-        aws_region: ${{ steps.gruntwork_context.outputs.aws_region }}
-        branch: ${{ steps.gruntwork_context.outputs.branch }}
-        working_directory: ${{ steps.gruntwork_context.outputs.working_directory }}
-        account_role_name: ${{ steps.gruntwork_context.outputs.role_name }}
-        role_session_name: ${{ steps.gruntwork_context.outputs.role_session_name }}
-        chain_account_id: ${{ steps.gruntwork_context.outputs.child_account_id }}
-        chain_account_role_name: ${{ steps.gruntwork_context.outputs.child_acct_role_name }}
-        tofu_version: ${{ steps.gruntwork_context.outputs.tofu_version }}
-        terragrunt_version: ${{ steps.gruntwork_context.outputs.terragrunt_version }}
-        tf_binary: ${{ steps.bootstrap.outputs.tf_binary }}
-        gruntwork_config_file: ${{ steps.gruntwork_context.outputs.gruntwork_config_file }}
-        pipelines_cli_version: ${{ steps.gruntwork_context.outputs.pipelines_cli_version }}
+    # TODO: Uncomment after testing baseline generation
+    # Also revert the removal of the terragrunt apply checks in the if condition of the steps below to avoid running them when the terragrunt command is not apply
+    # - name: "[ProvisionAccount]: Run Terragrunt to Create the account in AWS"
+    #   id: terragrunt
+    #   uses: gruntwork-io-team/pipelines-aws-execute@main
+    #   with:
+    #     gruntwork_code_access_token: ${{ inputs.gruntwork_code_access_token }}
+    #     terragrunt_command: ${{ steps.gruntwork_context.outputs.terragrunt_command }}
+    #     account_id: ${{ steps.gruntwork_context.outputs.account_id }}
+    #     aws_region: ${{ steps.gruntwork_context.outputs.aws_region }}
+    #     branch: ${{ steps.gruntwork_context.outputs.branch }}
+    #     working_directory: ${{ steps.gruntwork_context.outputs.working_directory }}
+    #     account_role_name: ${{ steps.gruntwork_context.outputs.role_name }}
+    #     role_session_name: ${{ steps.gruntwork_context.outputs.role_session_name }}
+    #     chain_account_id: ${{ steps.gruntwork_context.outputs.child_account_id }}
+    #     chain_account_role_name: ${{ steps.gruntwork_context.outputs.child_acct_role_name }}
+    #     tofu_version: ${{ steps.gruntwork_context.outputs.tofu_version }}
+    #     terragrunt_version: ${{ steps.gruntwork_context.outputs.terragrunt_version }}
+    #     tf_binary: ${{ steps.bootstrap.outputs.tf_binary }}
+    #     gruntwork_config_file: ${{ steps.gruntwork_context.outputs.gruntwork_config_file }}
+    #     pipelines_cli_version: ${{ steps.gruntwork_context.outputs.pipelines_cli_version }}
 
     - name: "[ProvisionAccount]: Get requesting PR number"
       id: get_pr_number
       shell: bash
-      if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
+      # if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
       env:
         COMMIT_SHA: ${{ steps.gruntwork_context.outputs.branch }}
         GH_TOKEN: ${{ inputs.gruntwork_code_access_token }}
@@ -59,7 +54,7 @@ runs:
         echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
 
     - name: "[ProvisionAccount]: Check out the architecture-catalog repo"
-      if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
+      # if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
       uses: actions/checkout@v4
       with:
         repository: gruntwork-io/terraform-aws-architecture-catalog
@@ -68,7 +63,7 @@ runs:
         ref: ${{ steps.gruntwork_context.outputs.control_tower_modules_version }}
 
     - name: "[ProvisionAccount]: Install boilerplate"
-      if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
+      # if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
       shell: bash
       env:
         GITHUB_OAUTH_TOKEN: ${{ inputs.gruntwork_code_access_token }}
@@ -77,7 +72,7 @@ runs:
         gruntwork-install --binary-name boilerplate --repo https://github.com/gruntwork-io/boilerplate --tag "${{ steps.gruntwork_context.outputs.boilerplate_version }}"
 
     - name: "[ProvisionAccount]: Run boilerplate to generate code"
-      if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
+      # if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
       shell: bash
       env:
         ACCOUNT_NAME: ${{ steps.gruntwork_context.outputs.team_account_names }}
@@ -139,7 +134,7 @@ runs:
         done
 
     - name: "[ProvisionAccount]: Create Pull Request"
-      if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
+      # if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
       id: create_pr
       uses: peter-evans/create-pull-request@v6
       with:
