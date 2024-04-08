@@ -25,7 +25,7 @@ runs:
         gruntwork_code_access_token: ${{ inputs.gruntwork_code_access_token }}
         terragrunt_command: ${{ steps.gruntwork_context.outputs.terragrunt_command }}
         account_id: ${{ steps.gruntwork_context.outputs.account_id }}
-        aws_region: ${{ steps.gruntwork_context.outputs.aws_region }}
+        aws_region: ${{ steps.gruntwork_context.outputs.default_aws_region }}
         branch: ${{ steps.gruntwork_context.outputs.branch }}
         working_directory: ${{ steps.gruntwork_context.outputs.working_directory }}
         account_role_name: ${{ steps.gruntwork_context.outputs.role_name }}
