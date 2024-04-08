@@ -18,6 +18,12 @@ runs:
         cache: ${{ inputs.gruntwork_context }}
         token: ${{ inputs.gruntwork_code_access_token }}
 
+    # TODO: Remove the need for this step by passing the branch name to pipelines-execute as input & update the pipelines-execute action to accept the branch name as input.
+    # aws-execute action should also accept the branch name as input since it wraps pipelines-execute.
+    - name: "[ProvisionAccount]: Set deployment env variable
+      run: |
+        echo "DEPLOY_BRANCH_NAME=${{ steps.gruntwork_context.outputs.deploy_branch_name }}" >> "$GITHUB_ENV"
+
     - name: "[ProvisionAccount]: Run Terragrunt to Create the account in AWS"
       id: terragrunt
       uses: gruntwork-io-team/pipelines-aws-execute@main
