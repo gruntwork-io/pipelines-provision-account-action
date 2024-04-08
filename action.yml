@@ -116,8 +116,8 @@ runs:
 
           tags="$(yq -o=json -I=0 '.tags' "$request_file_path")"
 
-          echo "PWD: $(pwd)" && cd ..
-          echo "Parent PWD: $(pwd)"
+          echo "PWD: $(pwd)" && ls -al && cd ..
+          echo "Parent PWD: $(pwd)" && ls -al
 
           boilerplate \
             --template-url "../terraform-aws-architecture-catalog//templates/single-account-baseline" \
