@@ -75,14 +75,14 @@ runs:
       # if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
       shell: bash
       env:
-        ACCOUNT_NAME: ${{ steps.gruntwork_context.outputs.team_account_names }}
+        ACCOUNT_NAMES: ${{ steps.gruntwork_context.outputs.team_account_names }}
         ACCOUNT_BASELINE_MODULES_VERSION: ${{ steps.gruntwork_context.outputs.control_tower_modules_version }}
       run: |
         # Convert list of accounts to Bash array.
         IFS=',' read -ra account_names <<<"$ACCOUNT_NAMES"
 
         first_account_name="${account_names[0]}"
-        request_file_path="./_new-account-requests/account-$first_account_name.yml"
+        request_file_path="./_new-account-requests/account-${first_account_name}.yml"
 
         org_name_prefix="$(yq -r '.org_name_prefix' "$request_file_path")"
 
