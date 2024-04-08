@@ -34,7 +34,7 @@ runs:
         chain_account_role_name: ${{ steps.gruntwork_context.outputs.child_acct_role_name }}
         tofu_version: ${{ steps.gruntwork_context.outputs.tofu_version }}
         terragrunt_version: ${{ steps.gruntwork_context.outputs.terragrunt_version }}
-        tf_binary: ${{ steps.bootstrap.outputs.tf_binary }}
+        tf_binary: ${{ steps.gruntwork_context.outputs.tf_binary }}
         gruntwork_config_file: ${{ steps.gruntwork_context.outputs.gruntwork_config_file }}
         pipelines_cli_version: ${{ steps.gruntwork_context.outputs.pipelines_cli_version }}
 
