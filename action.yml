@@ -116,11 +116,8 @@ runs:
 
           tags="$(yq -o=json -I=0 '.tags' "$request_file_path")"
 
-          echo "PWD: $(pwd)" && ls -al && cd ..
-          echo "Parent PWD: $(pwd)" && ls -al
-
           boilerplate \
-            --template-url "../terraform-aws-architecture-catalog//templates/single-account-baseline" \
+            --template-url "terraform-aws-architecture-catalog//templates/single-account-baseline" \
             --output-folder "." \
             --var AccountName="$account_name" \
             --var AwsRegion="$aws_region" \
@@ -135,6 +132,10 @@ runs:
             --var DisableMacie="$disable_macie" \
             --non-interactive
         done
+
+    - name: "[ProvisionAccount]: Remove architecture-catalog repo"
+      # if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
+      run: rm -rf terraform-aws-architecture-catalog
 
     - name: "[ProvisionAccount]: Create Pull Request"
       # if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
