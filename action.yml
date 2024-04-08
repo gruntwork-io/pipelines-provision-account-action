@@ -135,6 +135,7 @@ runs:
 
     - name: "[ProvisionAccount]: Remove architecture-catalog repo"
       # if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
+      shell: bash
       run: rm -rf terraform-aws-architecture-catalog
 
     - name: "[ProvisionAccount]: Create Pull Request"
