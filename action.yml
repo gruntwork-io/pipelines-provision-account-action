@@ -22,7 +22,7 @@ runs:
     # aws-execute action should also accept the branch name as input since it wraps pipelines-execute.
     - name: "[ProvisionAccount]: Set deployment env variable
       run: |
-        echo "DEPLOY_BRANCH_NAME=${{ steps.gruntwork_context.outputs.deploy_branch_name }}" >> "$GITHUB_ENV"
+        echo "DEPLOY_BRANCH_NAME=${{ steps.gruntwork_context.outputs.deploy_branch_name }}" >> $GITHUB_ENV
 
     - name: "[ProvisionAccount]: Run Terragrunt to Create the account in AWS"
       id: terragrunt
