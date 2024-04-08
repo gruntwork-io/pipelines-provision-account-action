@@ -126,7 +126,7 @@ runs:
             --var RequestingTeamName="${requesting_team_name}" \
             --var DefaultTags="$tags" \
             --var CreateVPC="$create_vpc" \
-            --var InfraLiveTeamRepoName="{{ .GithubOrg }}/$delegate_repo_name" \
+            --var InfraLiveTeamRepoName="gruntwork-io-team/$delegate_repo_name" \
             --var DisableSecurityHub="$disable_security_hub" \
             --var DisableGuardDuty="$disable_guard_duty" \
             --var DisableMacie="$disable_macie" \
