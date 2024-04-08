@@ -60,7 +60,7 @@ runs:
         repository: gruntwork-io/terraform-aws-architecture-catalog
         token: ${{ inputs.gruntwork_code_access_token }}
         path: terraform-aws-architecture-catalog
-        ref: ${{ steps.gruntwork_context.outputs.control_tower_modules_version }}
+        ref: ${{ steps.gruntwork_context.outputs.arch_catalog_version }}
 
     - name: "[ProvisionAccount]: Install boilerplate"
       # if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
