@@ -11,16 +11,9 @@ inputs:
 runs:
   using: composite
   steps:
-    # - name: "[ProvisionAccount]: Setup access-control PR"
-    #   id: provision_access_control
-    #   uses: gruntwork-io-team/pipelines-setup-access-control@main
-    #   with:
-    #     new_account_name: ${{ inputs.new_account_name }}
-
     - name: "[ProvisionAccount]: Load Gruntwork Context"
       id: gruntwork_context
       uses: gruntwork-io-team/pipelines-bootstrap@main
-      # Only try this if we've actually created the account
       with:
         cache: ${{ inputs.gruntwork_context }}
         token: ${{ inputs.gruntwork_code_access_token }}
@@ -41,7 +34,7 @@ runs:
     - name: "[ProvisionAccount]: Get requesting PR number"
       id: get_pr_number
       shell: bash
-      if:  ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
+      if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
       env:
         COMMIT_SHA: ${{ steps.gruntwork_context.outputs.branch }}
         GH_TOKEN: ${{ inputs.gruntwork_code_access_token }}
@@ -51,17 +44,17 @@ runs:
         echo "The PR number is: $PR_NUMBER"
         echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
 
-    - name: "[ProvisionAccount]: Check out terraform-aws-control-tower repo"
+    - name: "[ProvisionAccount]: Check out the architecture-catalog repo"
       if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
       uses: actions/checkout@v4
       with:
-        repository: gruntwork-io/terraform-aws-control-tower
+        repository: gruntwork-io/terraform-aws-architecture-catalog
         token: ${{ inputs.gruntwork_code_access_token }}
-        path: terraform-aws-control-tower
-        ref: ${{ steps.gruntwork_context.outputs.control_tower_modules_version }}
+        path: terraform-aws-architecture-catalog
+        ref: ${{ steps.gruntwork_context.outputs.arch_catalog_version }}
 
     - name: "[ProvisionAccount]: Install boilerplate"
-      if:  ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
+      if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
       shell: bash
       env:
         GITHUB_OAUTH_TOKEN: ${{ inputs.gruntwork_code_access_token }}
@@ -69,52 +62,91 @@ runs:
         curl -Ls https://raw.githubusercontent.com/gruntwork-io/gruntwork-installer/main/bootstrap-gruntwork-installer.sh | bash /dev/stdin --version "${{ steps.gruntwork_context.outputs.gruntwork_installer_version}}"
         gruntwork-install --binary-name boilerplate --repo https://github.com/gruntwork-io/boilerplate --tag "${{ steps.gruntwork_context.outputs.boilerplate_version }}"
 
-    - name: "[ProvisionAccount]: Run boilerplate to generate code"
-      if:  ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
+    - name: "[ProvisionAccount]: Run boilerplate to generate baselines for the new account(s)"
+      id: generate_baselines
+      if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
       shell: bash
       env:
-        ACCOUNT_NAME: ${{ steps.gruntwork_context.outputs.new_account_name }}
-        AWS_REGION: ${{ steps.gruntwork_context.outputs.aws_region }}
-        ORG_NAME_PREFIX: ${{ steps.gruntwork_context.outputs.org_name_prefix }}
-        ACCOUNT_BASELINE_MODULES_VERSION: ${{ steps.gruntwork_context.outputs.account_baseline_modules_version }}
-        ACCOUNT_BASELINE_CIS_SERVICE_CATALOG_VERSION: ${{ steps.gruntwork_context.outputs.account_baseline_cis_service_catalog_version }}
-        REQUESTING_TEAM_NAME: ${{ steps.gruntwork_context.outputs.requesting_team_name }}
-        DEFAULT_TAGS: ${{ steps.gruntwork_context.outputs.default_tags }}
-        CREATE_VPC: ${{ steps.gruntwork_context.outputs.create_vpc  }}
+        ACCOUNT_NAMES: ${{ steps.gruntwork_context.outputs.team_account_names }}
+        ACCOUNT_BASELINE_MODULES_VERSION: ${{ steps.gruntwork_context.outputs.control_tower_modules_version }}
       run: |
-        boilerplate \
-          --template-url "./terraform-aws-control-tower//templates/landingzone/boilerplate-single-account-baseline" \
-          --output-folder . \
-          --var AccountName="$ACCOUNT_NAME" \
-          --var AwsRegion="$AWS_REGION" \
-          --var OrgNamePrefix="$ORG_NAME_PREFIX" \
-          --var AccountBaselineModulesVersion="$ACCOUNT_BASELINE_MODULES_VERSION" \
-          --var AccountBaselineCISServiceCatalogVersion="$ACCOUNT_BASELINE_CIS_SERVICE_CATALOG_VERSION" \
-          --var RequestingTeamName="$REQUESTING_TEAM_NAME" \
-          --var DefaultTags="$DEFAULT_TAGS" \
-          --var CreateVPC="$CREATE_VPC" \
-          --var VpcModuleVersion="$ACCOUNT_BASELINE_CIS_SERVICE_CATALOG_VERSION" \
-          --non-interactive
+        # Convert list of accounts to Bash array.
+        IFS=',' read -ra account_names <<<"$ACCOUNT_NAMES"
 
-    - name: "[ProvisionAccount]: Remove Control Tower Repo"
+        first_account_name="${account_names[0]}"
+        request_file_path="./_new-account-requests/account-${first_account_name}.yml"
+
+        org_name_prefix="$(yq -r '.org_name_prefix' "$request_file_path")"
+
+        delegate_management="$(yq -r '.delegate_management // false' "$request_file_path")"
+        delegate_repo_name="$(yq -r '.delegate_repo_name' "$request_file_path")"
+
+        account_family="$(yq -r '.account_family' "$request_file_path")"
+
+        echo "account_family=$account_family" >>$GITHUB_OUTPUT
+
+        for account_name in "${account_names[@]}"; do
+          request_file_path="./_new-account-requests/account-$account_name.yml"
+          ipam_env_name="$(yq -r '.ipam_env_name' "$request_file_path")"
+
+          echo "Updating accounts.yml for account $account_name to set its IPAM env name to $ipam_env_name"
+          yq ".$account_name.ipam-env-name = \"$ipam_env_name\"" -i --prettyPrint accounts.yml
+
+          echo "Generating baseline for account $account_name"
+          aws_region="$(yq -r '.aws_region' "$request_file_path")"
+
+          create_vpc="$(yq -r '.create_vpc // false' "$request_file_path")"
+
+          disable_security_hub="$(yq -r '.disable_security_hub // false' "$request_file_path")"
+          disable_guard_duty="$(yq -r '.disable_guard_duty // false' "$request_file_path")"
+          disable_macie="$(yq -r '.disable_macie // false' "$request_file_path")"
+
+          yq ".$account_name.vpc_created = $create_vpc" -i --prettyPrint accounts.yml
+
+          echo "Updating accounts.yml for account $account_name to auto accept this account's TGW attachment requests if there is a VPC"
+          yq ".$account_name.auto-accept-tgw-attachments = $create_vpc" -i --prettyPrint accounts.yml
+
+          tags="$(yq -o=json -I=0 '.tags' "$request_file_path")"
+
+          boilerplate \
+            --template-url "terraform-aws-architecture-catalog//templates/single-account-baseline" \
+            --output-folder "." \
+            --var AccountName="$account_name" \
+            --var AwsRegion="$aws_region" \
+            --var OrgNamePrefix="$org_name_prefix" \
+            --var AccountBaselineModulesVersion="$ACCOUNT_BASELINE_MODULES_VERSION" \
+            --var RequestingTeamName="${requesting_team_name}" \
+            --var DefaultTags="$tags" \
+            --var CreateVPC="$create_vpc" \
+            --var InfraLiveTeamRepoName="gruntwork-io-team/$delegate_repo_name" \
+            --var DisableSecurityHub="$disable_security_hub" \
+            --var DisableGuardDuty="$disable_guard_duty" \
+            --var DisableMacie="$disable_macie" \
+            --non-interactive
+        done
+
+    - name: "[ProvisionAccount]: Remove unwanted files before pull request creation"
+      if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
       shell: bash
-      if:  ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
-      run: rm -rf terraform-aws-control-tower
+      run: |
+        rm -rf terraform-aws-architecture-catalog
+        rm state.json
+        rm details.json
 
     - name: "[ProvisionAccount]: Create Pull Request"
-      if:  ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
+      if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
       id: create_pr
       uses: peter-evans/create-pull-request@v6
       with:
         base: main
         token: ${{ inputs.gruntwork_code_access_token }}
-        branch: "enhancement/baseline-account-${{ steps.gruntwork_context.outputs.new_account_name }}"
-        commit-message: "Generate account baseline for: ${{ steps.gruntwork_context.outputs.new_account_name }}"
-        title: "Generate account baseline for: ${{ steps.gruntwork_context.outputs.new_account_name }}"
+        branch: "enhancement/account-${{ steps.generate_baselines.outputs.account_family }}"
+        commit-message: "Generate account baseline for: ${{ steps.generate_baselines.outputs.account_family }}"
+        title: "Generate account baseline for: ${{ steps.generate_baselines.outputs.account_family }}"
         body: |
-          This pull request applies an account baseline to the **${{ steps.gruntwork_context.outputs.new_account_name }}** AWS account, which was created in https://github.com/${{ github.repository }}/pull/${{ steps.get_pr_number.outputs.pr_number }} using Gruntwork Landing Zone. To **apply** this baseline, do the following:
+          This pull request applies an account baseline to the AWS account(s), which was created in https://github.com/${{ github.repository }}/pull/${{ steps.get_pr_number.outputs.pr_number }} using Gruntwork Landing Zone. To **apply** this baseline, do the following:
 
             1. Inspect the details in this pull request and confirm correctness.
             2. Merge this pull request.
 
-          Once merged, Gruntwork Pipelines will `terragrunt apply` the baseline in the newly created AWS account.
+          Once merged, Gruntwork Pipelines will `terragrunt apply` the baseline in the newly created AWS account(s).
