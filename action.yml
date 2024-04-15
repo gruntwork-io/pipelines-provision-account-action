@@ -103,9 +103,6 @@ runs:
 
           yq ".$account_name.vpc_created = $create_vpc" -i --prettyPrint accounts.yml
 
-          echo "Updating accounts.yml for account $account_name to auto accept this account's TGW attachment requests if there is a VPC"
-          yq ".$account_name.auto-accept-tgw-attachments = $create_vpc" -i --prettyPrint accounts.yml
-
           tags="$(yq -o=json -I=0 '.tags' "$request_file_path")"
 
           boilerplate \
