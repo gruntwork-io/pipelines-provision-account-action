@@ -1,7 +1,7 @@
 name: Bootstrap a new account in access-control repo
 description: "Sets up a new AWS account and basic roles inside the access control repo"
 inputs:
-  gruntwork_code_access_token:
+  PIPELINES_READ_TOKEN:
     description: ""
     required: true
   gruntwork_context:
@@ -16,19 +16,17 @@ runs:
       uses: gruntwork-io-team/pipelines-bootstrap@main
       with:
         cache: ${{ inputs.gruntwork_context }}
-        token: ${{ inputs.gruntwork_code_access_token }}
+        token: ${{ inputs.PIPELINES_READ_TOKEN }}
 
     - name: "[ProvisionAccount]: Run Terragrunt to Create the account in AWS"
       id: terragrunt
       uses: gruntwork-io-team/pipelines-aws-execute@main
       with:
-        gruntwork_code_access_token: ${{ inputs.gruntwork_code_access_token }}
+        PIPELINES_READ_TOKEN: ${{ inputs.PIPELINES_READ_TOKEN }}
         account_id: ${{ steps.gruntwork_context.outputs.account_id }}
         working_directory: ${{ steps.gruntwork_context.outputs.working_directory }}
         account_role_name: ${{ steps.gruntwork_context.outputs.role_name }}
         role_session_name: ${{ steps.gruntwork_context.outputs.role_session_name }}
-        chain_account_id: ${{ steps.gruntwork_context.outputs.child_account_id }}
-        chain_account_role_name: ${{ steps.gruntwork_context.outputs.child_acct_role_name }}
         gruntwork_context: ${{ inputs.gruntwork_context }}
 
     - name: "[ProvisionAccount]: Get requesting PR number"
@@ -37,10 +35,10 @@ runs:
       if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
       env:
         COMMIT_SHA: ${{ steps.gruntwork_context.outputs.branch }}
-        GH_TOKEN: ${{ inputs.gruntwork_code_access_token }}
+        GH_TOKEN: ${{ inputs.PIPELINES_READ_TOKEN }}
         REPO: ${{ github.repository }}
       run: |
-        PR_NUMBER=$(gh -R "$REPO" pr list --search "$COMMIT_SHA" --state merged --json number -q '.[0].number')
+        PR_NUMBER="$(gh -R "$REPO" pr list --search "$COMMIT_SHA" --state merged --json number -q '.[0].number')"
         echo "The PR number is: $PR_NUMBER"
         echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
 
@@ -49,7 +47,7 @@ runs:
       uses: actions/checkout@v4
       with:
         repository: gruntwork-io/terraform-aws-architecture-catalog
-        token: ${{ inputs.gruntwork_code_access_token }}
+        token: ${{ inputs.PIPELINES_READ_TOKEN }}
         path: terraform-aws-architecture-catalog
         ref: ${{ steps.gruntwork_context.outputs.arch_catalog_version }}
 
@@ -57,10 +55,11 @@ runs:
       if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
       shell: bash
       env:
-        GITHUB_OAUTH_TOKEN: ${{ inputs.gruntwork_code_access_token }}
+        GRUNTWORK_INSTALLER_VERSION: ${{ steps.gruntwork_context.outputs.gruntwork_installer_version }}
+        BOILERPLATE_VERSION: ${{ steps.gruntwork_context.outputs.boilerplate_version }}
       run: |
-        curl -Ls https://raw.githubusercontent.com/gruntwork-io/gruntwork-installer/main/bootstrap-gruntwork-installer.sh | bash /dev/stdin --version "${{ steps.gruntwork_context.outputs.gruntwork_installer_version}}"
-        gruntwork-install --binary-name boilerplate --repo https://github.com/gruntwork-io/boilerplate --tag "${{ steps.gruntwork_context.outputs.boilerplate_version }}"
+        curl -Ls https://raw.githubusercontent.com/gruntwork-io/gruntwork-installer/main/bootstrap-gruntwork-installer.sh | bash /dev/stdin --version "$GRUNTWORK_INSTALLER_VERSION"
+        gruntwork-install --binary-name boilerplate --repo https://github.com/gruntwork-io/boilerplate --tag "$BOILERPLATE_VERSION"
 
     - name: "[ProvisionAccount]: Run boilerplate to generate baselines for the new account(s)"
       id: generate_baselines
@@ -112,7 +111,7 @@ runs:
             --var AwsRegion="$aws_region" \
             --var OrgNamePrefix="$org_name_prefix" \
             --var AccountBaselineModulesVersion="$ACCOUNT_BASELINE_MODULES_VERSION" \
-            --var RequestingTeamName="${requesting_team_name}" \
+            --var RequestingTeamName="$requesting_team_name" \
             --var DefaultTags="$tags" \
             --var CreateVPC="$create_vpc" \
             --var InfraLiveTeamRepoName="gruntwork-io-team/$delegate_repo_name" \
@@ -136,7 +135,7 @@ runs:
       uses: peter-evans/create-pull-request@v6
       with:
         base: main
-        token: ${{ inputs.gruntwork_code_access_token }}
+        token: ${{ inputs.PIPELINES_READ_TOKEN }}
         branch: "enhancement/account-${{ steps.generate_baselines.outputs.account_family }}"
         commit-message: "Generate account baseline for: ${{ steps.generate_baselines.outputs.account_family }}"
         title: "Generate account baseline for: ${{ steps.generate_baselines.outputs.account_family }}"
