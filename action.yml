@@ -4,6 +4,9 @@ inputs:
   PIPELINES_READ_TOKEN:
     description: ""
     required: true
+  INFRA_ROOT_WRITE_TOKEN:
+    description: ""
+    required: true
   gruntwork_context:
     description: "Gruntwork Context From the Gruntwork Bootstrap step"
     required: true
@@ -135,7 +138,7 @@ runs:
       uses: peter-evans/create-pull-request@v6
       with:
         base: main
-        token: ${{ inputs.PIPELINES_READ_TOKEN }}
+        token: ${{ inputs.INFRA_ROOT_WRITE_TOKEN }}
         branch: "enhancement/account-${{ steps.generate_baselines.outputs.account_family }}"
         commit-message: "Generate account baseline for: ${{ steps.generate_baselines.outputs.account_family }}"
         title: "Generate account baseline for: ${{ steps.generate_baselines.outputs.account_family }}"
