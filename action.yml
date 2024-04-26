@@ -16,14 +16,14 @@ runs:
   steps:
     - name: "[ProvisionAccount]: Load Gruntwork Context"
       id: gruntwork_context
-      uses: gruntwork-io/pipelines-bootstrap@main
+      uses: gruntwork-io/pipelines-bootstrap@v0.0.1
       with:
         cache: ${{ inputs.gruntwork_context }}
         token: ${{ inputs.PIPELINES_READ_TOKEN }}
 
     - name: "[ProvisionAccount]: Run Terragrunt to Create the account in AWS"
       id: terragrunt
-      uses: gruntwork-io/pipelines-aws-execute@main
+      uses: gruntwork-io/pipelines-aws-execute@v0.0.1
       with:
         PIPELINES_READ_TOKEN: ${{ inputs.PIPELINES_READ_TOKEN }}
         account_id: ${{ steps.gruntwork_context.outputs.account_id }}
