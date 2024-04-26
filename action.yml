@@ -16,14 +16,14 @@ runs:
   steps:
     - name: "[ProvisionAccount]: Load Gruntwork Context"
       id: gruntwork_context
-      uses: gruntwork-io-team/pipelines-bootstrap@main
+      uses: gruntwork-io/pipelines-bootstrap@main
       with:
         cache: ${{ inputs.gruntwork_context }}
         token: ${{ inputs.PIPELINES_READ_TOKEN }}
 
     - name: "[ProvisionAccount]: Run Terragrunt to Create the account in AWS"
       id: terragrunt
-      uses: gruntwork-io-team/pipelines-aws-execute@main
+      uses: gruntwork-io/pipelines-aws-execute@main
       with:
         PIPELINES_READ_TOKEN: ${{ inputs.PIPELINES_READ_TOKEN }}
         account_id: ${{ steps.gruntwork_context.outputs.account_id }}
@@ -117,7 +117,7 @@ runs:
             --var RequestingTeamName="$requesting_team_name" \
             --var DefaultTags="$tags" \
             --var CreateVPC="$create_vpc" \
-            --var InfraLiveTeamRepoName="gruntwork-io-team/$delegate_repo_name" \
+            --var InfraLiveTeamRepoName="gruntwork-io/$delegate_repo_name" \
             --var DisableSecurityHub="$disable_security_hub" \
             --var DisableGuardDuty="$disable_guard_duty" \
             --var DisableMacie="$disable_macie" \
