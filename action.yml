@@ -129,8 +129,8 @@ runs:
       shell: bash
       run: |
         rm -rf terraform-aws-architecture-catalog
-        rm state.json
-        rm details.json
+        rm -f state.json
+        rm -f details.json
 
     - name: "[ProvisionAccount]: Create Pull Request"
       if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
