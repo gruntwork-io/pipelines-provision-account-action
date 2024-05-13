@@ -1,0 +1,4 @@
+variables:
+  - name: PullRequestURL
+    description: The URL for the pull request created as part of account creation
+    type: string
