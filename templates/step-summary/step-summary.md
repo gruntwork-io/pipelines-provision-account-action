@@ -1,7 +1,7 @@
-### Baseline Pull Request
+### Baseline Pull Request 🚧
 
-Now that you've created your account, you're ready to review and merge the baseline pull request.
+Account provisioning complete! 🎉
 
-This is the pull request that contains the initial resources you need in a new account to have it ready for use.
+A baseline pull request has been created to provision the initial resources you need in a new account to have it ready for production workloads.
 
 To see the pull request, click [here]({{ .PullRequestURL }}).
