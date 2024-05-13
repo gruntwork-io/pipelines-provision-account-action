@@ -157,6 +157,7 @@ runs:
         ACTION_PATH: ${{ github.action_path }}
         MERGED_PR_NUMBER: ${{ steps.get_pr_number.outputs.pr_number }}
         CREATED_PR_URL: ${{ steps.create_pr.outputs.pull-request-url }}
+        GH_TOKEN: ${{ inputs.INFRA_ROOT_WRITE_TOKEN }}
       run: |
         boilerplate \
         --template-url "$ACTION_PATH/templates/step-summary" \
