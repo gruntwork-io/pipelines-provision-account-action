@@ -149,3 +149,24 @@ runs:
             2. Merge this pull request.
 
           Once merged, Gruntwork Pipelines will `terragrunt apply` the baseline in the newly created AWS account(s).
+
+    - name: "[ProvisionAccount]: Communicate PR URL"
+      shell: bash
+      if: ${{ steps.gruntwork_context.outputs.terragrunt_command == 'apply' }}
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        MERGED_PR_URL: https://github.com/${{ github.repository }}/pull/${{ steps.get_pr_number.outputs.pr_number }}
+        CREATED_PR_URL: ${{ steps.create_pr.outputs.pull-request-url }}
+        GH_TOKEN: ${{ inputs.INFRA_ROOT_WRITE_TOKEN }}
+      run: |
+        boilerplate \
+        --template-url "$ACTION_PATH/templates/step-summary" \
+        --output-folder "." \
+        --var PullRequestURL="$CREATED_PR_URL"
+
+        cat step-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+        gh pr comment "$MERGED_PR_URL" \
+        -F step-summary.md
+
+        rm -f step-summary.md
