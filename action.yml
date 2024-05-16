@@ -23,7 +23,7 @@ runs:
 
     - name: "[ProvisionAccount]: Run Terragrunt to Create the account in AWS"
       id: terragrunt
-      uses: gruntwork-io/pipelines-aws-execute@v2.0.0
+      uses: gruntwork-io/pipelines-aws-execute@test/trying-out-status-update
       with:
         PIPELINES_READ_TOKEN: ${{ inputs.PIPELINES_READ_TOKEN }}
         account_id: ${{ steps.gruntwork_context.outputs.account_id }}
